@@ -19,7 +19,7 @@ export const state = {
 const getAllowedCharacters = function () {
   const allowedChars = [];
   if (state.characterSet.alphabet)
-    "abcdefghijklmnpqrstuvwxzy"
+    "abcdefghijklmnopqrstuvwxyz"
       .split("")
       .forEach(
         (char) =>
@@ -33,6 +33,20 @@ const getAllowedCharacters = function () {
 };
 
 /**
+ * Get a uniformly distributed random integer in [0, n) from the browser's CSPRNG
+ *
+ * Rejection sampling discards values above the largest multiple of n so the
+ * modulo does not favour lower indices.
+ */
+const randomIndex = function (n) {
+  const limit = Math.floor(2 ** 32 / n) * n;
+  const buf = new Uint32Array(1);
+  do crypto.getRandomValues(buf);
+  while (buf[0] >= limit);
+  return buf[0] % n;
+};
+
+/**
  * Generate random string based on state.characterset
  */
 export const randomString = function (keyParameters) {
@@ -43,11 +57,17 @@ export const randomString = function (keyParameters) {
   // 2. Get allowable character array
   const allowedChars = getAllowedCharacters();
 
+  // No character set selected: there is nothing to build a key from
+  if (allowedChars.length === 0) {
+    state.key = "";
+    return;
+  }
+
   // 3. Generate random key with character set
   const randomKey = [];
   const charSetLength = allowedChars.length;
   for (let i = 0; i < state.keyLength; i++) {
-    randomKey.push(allowedChars.at(Math.floor(Math.random() * charSetLength)));
+    randomKey.push(allowedChars[randomIndex(charSetLength)]);
   }
 
   // 4. Set the current state key
